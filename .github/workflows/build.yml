@@ -1,0 +1,19 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build
+        run: swift build -c release
+      
+      - uses: actions/upload-artifact@v3
+        with:
+          name: App
+          path: .build/release/SystemMonitor
