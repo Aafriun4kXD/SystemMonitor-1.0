@@ -10,20 +10,58 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
+      - name: Install dependencies
+        run: |
+          gem install xcodeproj
+      
+      - name: Create Xcode Project
+        run: |
+          ruby << 'EOF'
+          require 'xcodeproj'
+          
+          # Создаём проект
+          project = Xcodeproj::Project.new('SystemMonitor.xcodeproj')
+          target = project.new_target(:application, 'SystemMonitor', :ios, '15.0')
+          
+          # Добавляем файлы
+          group = project.main_group.new_group('Sources')
+          Dir['Sources/*.swift'].each do |f|
+            file = group.new_file(f)
+            target.add_file_references([file])
+          end
+          
+          # Настройки сборки
+          target.build_configurations.each do |config|
+            config.build_settings['SWIFT_VERSION'] = '5.0'
+            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+            config.build_settings['CODE_SIGN_IDENTITY'] = ''
+            config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+            config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+            config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = 'com.you.systemmonitor'
+          end
+          
+          project.save
+          EOF
       
       - name: Build
         run: |
-          xcodebuild -scheme SystemMonitor \
-            -destination 'generic/platform=iOS' \
+          xcodebuild -project SystemMonitor.xcodeproj \
+            -scheme SystemMonitor \
             -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/SystemMonitor.xcarchive \
+            archive \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            SWIFT_VERSION=5.9
+            CODE_SIGNING_ALLOWED=NO
+      
+      - name: Create IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/SystemMonitor.xcarchive/Products/Applications/SystemMonitor.app Payload/
+          zip -r SystemMonitor.ipa Payload/
       
       - uses: actions/upload-artifact@v4
         with:
-          name: App
-          path: build/Release-iphoneos/SystemMonitor.app
+          name: SystemMonitor-IPA
+          path: SystemMonitor.ipa
