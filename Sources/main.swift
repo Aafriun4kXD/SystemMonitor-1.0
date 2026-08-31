@@ -1,6 +1,4 @@
 import SwiftUI
-import UIKit
-import Foundation
 
 @main
 struct SystemMonitorApp: App {
